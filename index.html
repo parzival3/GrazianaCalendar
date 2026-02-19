@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Calendario raccolta differenziata e compleanni">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Graziana">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Calendario Graziana</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 3em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .card h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 4px solid #667eea;
+            padding-bottom: 15px;
+        }
+
+        .recycling-day {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+
+        .recycling-icon {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3em;
+            flex-shrink: 0;
+        }
+
+        .recycling-icon.umido {
+            background-color: #8B4513;
+            color: white;
+        }
+
+        .recycling-icon.carta {
+            background-color: #4169E1;
+            color: white;
+        }
+
+        .recycling-icon.plastica {
+            background-color: #FFD700;
+            color: #333;
+        }
+
+        .recycling-icon.secco {
+            background-color: #808080;
+            color: white;
+        }
+
+        .recycling-icon.none {
+            background-color: #90EE90;
+            color: #333;
+        }
+
+        .recycling-text {
+            flex: 1;
+        }
+
+        .recycling-text h3 {
+            font-size: 2em;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .recycling-text p {
+            font-size: 3.5em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .birthday-list {
+            list-style: none;
+        }
+
+        .birthday-item {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            margin: 15px 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            font-size: 2em;
+        }
+
+        .birthday-item.today {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            border: 5px solid #FF6347;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .birthday-icon {
+            font-size: 2em;
+            margin-right: 20px;
+        }
+
+        .no-birthdays {
+            font-size: 1.8em;
+            color: #666;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .date-display {
+            text-align: center;
+            color: white;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📅 Calendario di Graziana</h1>
+        <div class="date-display" id="dateDisplay"></div>
+
+        <div class="card">
+            <h2>🗑️ Raccolta Differenziata</h2>
+            <div id="todayRecycling" class="recycling-day"></div>
+            <div id="tomorrowRecycling" class="recycling-day"></div>
+        </div>
+
+        <div class="card">
+            <h2>🎂 Compleanni della Settimana</h2>
+            <ul id="birthdayList" class="birthday-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        // Emoji per i tipi di rifiuti
+        const recyclingEmojis = {
+            'UMIDO': '🍂',
+            'CARTA': '📄',
+            'PLASTICA/LATTINE': '🥤',
+            'SECCO': '🗑️'
+        };
+
+        // Carica i dati della raccolta differenziata
+        async function loadRecyclingData() {
+            try {
+                const response = await fetch('motta_2026_recycling_calendar_full.json');
+                return await response.json();
+            } catch (error) {
+                console.error('Errore nel caricamento del calendario:', error);
+                return null;
+            }
+        }
+
+        // Carica i compleanni
+        async function loadBirthdays() {
+            try {
+                const response = await fetch('birthdays.json');
+                return await response.json();
+            } catch (error) {
+                console.error('Errore nel caricamento dei compleanni:', error);
+                return [];
+            }
+        }
+
+        // Formatta la data in formato YYYY-MM-DD
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Formatta la data in italiano
+        function formatDateItalian(date) {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            return date.toLocaleDateString('it-IT', options);
+        }
+
+        // Mostra la raccolta differenziata
+        function displayRecycling(recyclingData) {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            const todayKey = formatDate(today);
+            const tomorrowKey = formatDate(tomorrow);
+
+            const todayTypes = (recyclingData[todayKey] || []).filter(type => type !== 'UMIDO');
+            const tomorrowTypes = (recyclingData[tomorrowKey] || []).filter(type => type !== 'UMIDO');
+
+            displayRecyclingDay('todayRecycling', 'OGGI', todayTypes);
+            displayRecyclingDay('tomorrowRecycling', 'DOMANI', tomorrowTypes);
+        }
+
+        function displayRecyclingDay(elementId, label, types) {
+            const element = document.getElementById(elementId);
+            if (types.length === 0) {
+                element.innerHTML = `
+                    <div class="recycling-icon none">✓</div>
+                    <div class="recycling-text">
+                        <h3>${label}</h3>
+                        <p>Nessuna raccolta</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const type = types[0];
+            const className = type.toLowerCase().replace('/', '-').replace(' ', '-');
+            const emoji = recyclingEmojis[type] || '♻️';
+
+            element.innerHTML = `
+                <div class="recycling-icon ${className.split('/')[0]}">
+                    ${emoji}
+                </div>
+                <div class="recycling-text">
+                    <h3>${label}</h3>
+                    <p>${type}</p>
+                </div>
+            `;
+        }
+
+        // Mostra i compleanni della settimana
+        function displayBirthdays(birthdays) {
+            const today = new Date();
+            const listElement = document.getElementById('birthdayList');
+
+            // Calcola l'inizio e la fine della settimana corrente (lunedì-domenica)
+            const currentDay = today.getDay();
+            const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() + mondayOffset);
+            weekStart.setHours(0, 0, 0, 0);
+
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            weekEnd.setHours(23, 59, 59, 999);
+
+            const thisWeekBirthdays = [];
+
+            birthdays.forEach(person => {
+                const birthdayThisYear = new Date(today.getFullYear(), person.month - 1, person.day);
+
+                if (birthdayThisYear >= weekStart && birthdayThisYear <= weekEnd) {
+                    const isToday = birthdayThisYear.toDateString() === today.toDateString();
+                    thisWeekBirthdays.push({
+                        name: person.name,
+                        date: birthdayThisYear,
+                        isToday: isToday
+                    });
+                }
+            });
+
+            // Ordina per data
+            thisWeekBirthdays.sort((a, b) => a.date - b.date);
+
+            if (thisWeekBirthdays.length === 0) {
+                listElement.innerHTML = '<li class="no-birthdays">Nessun compleanno questa settimana</li>';
+                return;
+            }
+
+            listElement.innerHTML = thisWeekBirthdays.map(birthday => {
+                const dateStr = formatDateItalian(birthday.date);
+                const todayClass = birthday.isToday ? 'today' : '';
+                const todayText = birthday.isToday ? ' - OGGI! 🎉' : '';
+                return `
+                    <li class="birthday-item ${todayClass}">
+                        <span class="birthday-icon">🎂</span>
+                        <strong>${birthday.name}</strong> - ${dateStr}${todayText}
+                    </li>
+                `;
+            }).join('');
+        }
+
+        // Aggiorna la visualizzazione della data
+        function updateDateDisplay() {
+            const today = new Date();
+            document.getElementById('dateDisplay').textContent = formatDateItalian(today);
+        }
+
+        // Calcola millisecondi fino alla mezzanotte
+        function millisecondsUntilMidnight() {
+            const now = new Date();
+            const midnight = new Date(now);
+            midnight.setHours(24, 0, 0, 0);
+            return midnight - now;
+        }
+
+        // Inizializza la pagina
+        async function init() {
+            updateDateDisplay();
+
+            const recyclingData = await loadRecyclingData();
+            const birthdays = await loadBirthdays();
+
+            if (recyclingData) {
+                displayRecycling(recyclingData);
+            } else {
+                document.getElementById('todayRecycling').innerHTML = '<div class="error">Errore nel caricamento dei dati</div>';
+            }
+
+            displayBirthdays(birthdays);
+
+            // Aggiorna automaticamente a mezzanotte
+            const msUntilMidnight = millisecondsUntilMidnight();
+            setTimeout(() => {
+                location.reload();
+            }, msUntilMidnight);
+        }
+
+        // Registra il service worker per il supporto offline
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => console.log('Service Worker registrato'))
+                    .catch(err => console.log('Service Worker non registrato:', err));
+            });
+        }
+
+        // Avvia l'applicazione
+        init();
+    </script>
+</body>
+</html>
