@@ -2,7 +2,7 @@
   "name": "Calendario Graziana",
   "short_name": "Graziana",
   "description": "Calendario raccolta differenziata e compleanni",
-  "start_url": "/",
+  "start_url": "/GrazianaCalendar",
   "display": "standalone",
   "background_color": "#667eea",
   "theme_color": "#667eea",
